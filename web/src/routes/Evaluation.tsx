@@ -218,14 +218,16 @@ export default function Evaluation() {
             const rating = getModelRating(model);
 
             return (
-              <div key={model} className="space-y-3">
+              <div key={`${currentSentenceId}-${model}`} className="space-y-3">
                 <AudioPlayer 
+                  key={`audio-${currentSentenceId}-${model}`}
                   audioSrc={audioSrc} 
                   label={label}
                   onPlayed={() => handleAudioPlayed(model)}
                   onAudioRef={registerAudio}
                 />
                 <RatingInput
+                  key={`rating-${currentSentenceId}-${model}`}
                   label={label}
                   naturalness={rating.naturalness}
                   accuracy={rating.accuracy}
