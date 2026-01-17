@@ -35,7 +35,7 @@ export function areSentenceRatingsComplete(
   return models.every(model => {
     const modelRating = sentenceRatings.find(r => r.model === model);
     return modelRating && 
-           isValidRating(modelRating.naturalness) && 
-           isValidRating(modelRating.accuracy);
+           isValidRating(modelRating.naturalness ?? -1) && 
+           isValidRating(modelRating.accuracy ?? -1);
   });
 }
