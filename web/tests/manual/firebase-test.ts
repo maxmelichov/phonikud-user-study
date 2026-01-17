@@ -1,4 +1,4 @@
-import { submitSubmission, exportToCSV } from '../../lib/firebase';
+import { submitSubmission, exportToCSV } from '../../src/lib/firebase';
 
 async function main() {
   const args = process.argv.slice(2);
