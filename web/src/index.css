@@ -121,3 +121,31 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* RTL Support for Hebrew */
+[dir="rtl"] {
+  direction: rtl;
+}
+
+[dir="ltr"] {
+  direction: ltr;
+}
+
+.hebrew-text {
+  direction: rtl;
+  text-align: right;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* RTL-aware spacing utilities */
+[dir="rtl"] .space-x-reverse > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-x-reverse: 1;
+}
+
+/* Ensure proper text alignment for Hebrew inputs and labels */
+[dir="rtl"] input,
+[dir="rtl"] textarea,
+[dir="rtl"] select {
+  text-align: right;
+}
+

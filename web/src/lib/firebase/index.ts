@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, writeBatch, doc } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDhX8O6T5v1wNVFQsQQ4j9_K9jQTNarf2s",
@@ -39,6 +39,84 @@ export async function submitSubmission(submission: Submission) {
     console.error('Error adding submission:', error);
     throw error;
   }
+}
+
+/**
+ * Submit multiple ratings in a batch (more efficient)
+ */
+export async function submitBatch(submissions: Submission[]): Promise<void> {
+  try {
+    const batch = writeBatch(db);
+    
+    submissions.forEach((submission) => {
+      const docRef = doc(collection(db, 'submissions'));
+      batch.set(docRef, {
+        ...submission,
+        timestamp: new Date()
+      });
+    });
+    
+    await batch.commit();
+    console.log(`Batch of ${submissions.length} submissions added successfully`);
+  } catch (error) {
+    console.error('Error submitting batch:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all submissions from Firestore
+ */
+export async function getAllSubmissions(): Promise<Submission[]> {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'submissions'));
+    return querySnapshot.docs.map(doc => doc.data() as Submission);
+  } catch (error) {
+    console.error('Error fetching submissions:', error);
+    throw error;
+  }
+}
+
+/**
+ * Calculate statistics per model
+ */
+export interface ModelStats {
+  model: string;
+  count: number;
+  meanNaturalness: number;
+  meanAccuracy: number;
+  stderrNaturalness: number;
+  stderrAccuracy: number;
+}
+
+export function calculateStats(submissions: Submission[]): ModelStats[] {
+  const modelGroups = submissions.reduce((acc, sub) => {
+    if (!acc[sub.model]) {
+      acc[sub.model] = [];
+    }
+    acc[sub.model].push(sub);
+    return acc;
+  }, {} as Record<string, Submission[]>);
+
+  return Object.entries(modelGroups).map(([model, subs]) => {
+    const naturalness = subs.map(s => s.naturalness);
+    const accuracy = subs.map(s => s.accuracy);
+    
+    const meanNat = naturalness.reduce((a, b) => a + b, 0) / naturalness.length;
+    const meanAcc = accuracy.reduce((a, b) => a + b, 0) / accuracy.length;
+    
+    const varNat = naturalness.reduce((a, b) => a + Math.pow(b - meanNat, 2), 0) / naturalness.length;
+    const varAcc = accuracy.reduce((a, b) => a + Math.pow(b - meanAcc, 2), 0) / accuracy.length;
+    
+    return {
+      model,
+      count: subs.length,
+      meanNaturalness: meanNat,
+      meanAccuracy: meanAcc,
+      stderrNaturalness: Math.sqrt(varNat / subs.length),
+      stderrAccuracy: Math.sqrt(varAcc / subs.length)
+    };
+  });
 }
 
 /**
