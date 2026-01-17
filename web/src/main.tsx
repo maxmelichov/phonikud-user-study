@@ -1,10 +1,15 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import App from './App.tsx'
+import App from './routes/home.tsx'
+import TestFirebase from './routes/experimental/TestFirebase.tsx'
+import { BrowserRouter, Route, Routes } from "react-router";
+
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+  <BrowserRouter>
+  <Routes>
+    <Route path="/" element={<App />} />
+    <Route path="/experimental/test-firebase" element={<TestFirebase />} />
+  </Routes>
+  </BrowserRouter>,
 )
