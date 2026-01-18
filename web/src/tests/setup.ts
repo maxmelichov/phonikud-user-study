@@ -10,3 +10,10 @@ Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
   configurable: true,
   value: () => undefined,
 });
+
+// Mock ResizeObserver for Radix UI components
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};

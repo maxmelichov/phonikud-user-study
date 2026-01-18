@@ -31,7 +31,7 @@ function ScaleRow({ idPrefix, title, value, onChange, leftLabel, rightLabel }: S
         <span className="text-xs text-slate-500 whitespace-nowrap">{leftLabel}</span>
         <RadioGroup
           key={`${idPrefix}-group`}
-          value={value?.toString() || undefined}
+          value={value?.toString() ?? ""}
           onValueChange={(next) => onChange(parseInt(next))}
           className="flex justify-center gap-4"
         >
