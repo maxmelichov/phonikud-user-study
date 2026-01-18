@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import type { ModelStats } from '../lib/firebase';
 import { getAllSubmissions, calculateStats, exportToCSV } from '../lib/firebase';
-import { RefreshCcw, Download, Home, MessageSquare } from 'lucide-react';
+import { RefreshCcw, Download, Home, MessageSquare, Database } from 'lucide-react';
 
 export default function Results() {
   const [stats, setStats] = useState<ModelStats[]>([]);
@@ -142,7 +142,13 @@ export default function Results() {
                 </Button>
               </div>
               <div className="flex gap-2">
-                <Button asChild variant="secondary">
+                <Button asChild variant="outline">
+                  <a href="https://console.firebase.google.com/u/0/project/phonikud-user-study" target="_blank" rel="noopener noreferrer">
+                    <Database className="h-4 w-4" />
+                    ניהול מסד נתונים
+                  </a>
+                </Button>
+                <Button asChild variant="outline">
                   <Link to="/feedbacks">
                     <MessageSquare className="h-4 w-4" />
                     הערות משתתפים
