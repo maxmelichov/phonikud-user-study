@@ -60,7 +60,7 @@ export default function ThankYou() {
       <Card className="max-w-2xl w-full">
         <CardHeader>
           <CardTitle className="text-center text-3xl" dir="rtl">
-            תודה רבה על השתתפותך!
+            תודה רבה על השתתפותך! 🎉
           </CardTitle>
         </CardHeader>
         
@@ -119,7 +119,7 @@ export default function ThankYou() {
             <div className="text-center text-green-600 font-medium pt-6 border-t border-slate-200" dir="rtl">
               <span className="inline-flex items-center gap-2">
                 <CheckCircle className="h-4 w-4" />
-                תודה על המשוב!
+                תודה על המשוב! 💚
               </span>
             </div>
           )}
