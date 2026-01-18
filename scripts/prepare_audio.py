@@ -51,8 +51,8 @@ def main() -> None:
             # Download WAV
             sh.wget("-q", "-O", str(wav_file), url)
 
-            # Convert to M4A with ffmpeg (96k for TTS)
-            sh.ffmpeg("-i", str(wav_file), "-c:a", "aac", "-b:a", "96k", str(m4a_file), "-y", "-loglevel", "quiet")
+            # Convert to M4A with ffmpeg (96k for TTS) and normalize loudness
+            sh.ffmpeg("-i", str(wav_file), "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-c:a", "aac", "-b:a", "96k", str(m4a_file), "-y", "-loglevel", "quiet")
 
             # Delete WAV
             wav_file.unlink()
