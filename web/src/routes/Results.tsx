@@ -20,15 +20,15 @@ export default function Results() {
   const loadResults = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const submissions = await getAllSubmissions();
       setTotalSubmissions(submissions.length);
-      
+
       // Count unique participants
       const uniqueEmails = new Set(submissions.map(s => s.email));
       setUniqueParticipants(uniqueEmails.size);
-      
+
       // Calculate stats
       const modelStats = calculateStats(submissions);
       setStats(modelStats);
@@ -46,11 +46,11 @@ export default function Results() {
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
-      
+
       link.setAttribute('href', url);
       link.setAttribute('download', `phonikud-study-results-${new Date().toISOString()}.csv`);
       link.style.visibility = 'hidden';
-      
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -85,7 +85,7 @@ export default function Results() {
               תוצאות מחקר הערכת TTS
             </CardTitle>
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
             {/* Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -95,7 +95,7 @@ export default function Results() {
               </div>
               <div className="p-4 bg-slate-100 rounded-lg text-center">
                 <div className="text-3xl font-bold text-slate-900">{totalSubmissions}</div>
-                <div className="text-sm text-slate-600" dir="rtl">דירוגים כוללים</div>
+                <div className="text-sm text-slate-600" dir="rtl">השוואות כוללות</div>
               </div>
             </div>
 
@@ -105,22 +105,22 @@ export default function Results() {
                 <thead>
                   <tr className="bg-slate-200">
                     <th className="border p-3 text-right" dir="rtl">מודל</th>
-                    <th className="border p-3 text-center" dir="rtl">מספר דירוגים</th>
-                    <th className="border p-3 text-center" dir="rtl">ממוצע טבעיות</th>
-                    <th className="border p-3 text-center" dir="rtl">ממוצע דיוק</th>
-                    <th className="border p-3 text-center" dir="rtl">סטיית תקן טבעיות</th>
-                    <th className="border p-3 text-center" dir="rtl">סטיית תקן דיוק</th>
+                    <th className="border p-3 text-center" dir="rtl">ניצחונות טבעיות</th>
+                    <th className="border p-3 text-center" dir="rtl">ניצחונות דיוק</th>
+                    <th className="border p-3 text-center" dir="rtl">סה&quot;כ השוואות</th>
                   </tr>
                 </thead>
                 <tbody>
                   {stats.map(stat => (
                     <tr key={stat.model} className="hover:bg-slate-50">
                       <td className="border p-3 font-semibold">{stat.model}</td>
-                      <td className="border p-3 text-center">{stat.count}</td>
-                      <td className="border p-3 text-center">{stat.meanNaturalness.toFixed(2)}</td>
-                      <td className="border p-3 text-center">{stat.meanAccuracy.toFixed(2)}</td>
-                      <td className="border p-3 text-center">{stat.stderrNaturalness.toFixed(3)}</td>
-                      <td className="border p-3 text-center">{stat.stderrAccuracy.toFixed(3)}</td>
+                      <td className="border p-3 text-center">
+                        {stat.naturalness_wins} ({stat.total_comparisons > 0 ? Math.round((stat.naturalness_wins / stat.total_comparisons) * 100) : 0}%)
+                      </td>
+                      <td className="border p-3 text-center">
+                        {stat.accuracy_wins} ({stat.total_comparisons > 0 ? Math.round((stat.accuracy_wins / stat.total_comparisons) * 100) : 0}%)
+                      </td>
+                      <td className="border p-3 text-center">{stat.total_comparisons}</td>
                     </tr>
                   ))}
                 </tbody>

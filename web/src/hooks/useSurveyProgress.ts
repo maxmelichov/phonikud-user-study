@@ -6,15 +6,14 @@ export function useSurveyProgress(
   currentSentenceIndex: number,
   totalSentences: number,
   ratings: Rating[],
-  sentenceOrder: string[],
-  models: string[]
+  sentenceOrder: string[]
 ) {
   const currentSentenceId = sentenceOrder[currentSentenceIndex];
-  
+
   const isCurrentSentenceComplete = useMemo(() => {
     if (!currentSentenceId) return false;
-    return areSentenceRatingsComplete(currentSentenceId, models, ratings);
-  }, [currentSentenceId, models, ratings]);
+    return areSentenceRatingsComplete(currentSentenceId, ratings);
+  }, [currentSentenceId, ratings]);
 
   const progressPercentage = useMemo(() => {
     return Math.round((currentSentenceIndex / totalSentences) * 100);

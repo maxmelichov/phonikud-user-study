@@ -19,7 +19,6 @@ vi.mock('firebase/firestore', () => ({
 }));
 
 // 2. Mock our own firebase lib to spy on submitBatch
-// We use a variable to capture the spy so we can assert on it
 vi.mock('@/lib/firebase', async () => {
   const actual = await vi.importActual<typeof import('@/lib/firebase')>('@/lib/firebase');
   return {
@@ -33,24 +32,21 @@ describe('Evaluation Core Logic', () => {
     vi.clearAllMocks();
   });
 
-  it('generates correct submission payload for all models', async () => {
-    // Define test data locally to avoid import circularities
-    const TTS_MODELS = ['phonikud_stts2', 'roboshaul_nakdimon', 'gemini_unvocalized', 'piper-phonikud'];
+  it('generates correct A/B submission payload', async () => {
     const sentenceId = 'sentence-1';
     const user = { name: 'Test User', email: 'test@example.com' };
-    
+
     // Simulate the exact logic used in Evaluation.tsx:handleNext
-    const submissions = TTS_MODELS.map(model => ({
+    const submission = {
       name: user.name,
       email: user.email,
       sentence_id: sentenceId,
-      model,
-      naturalness: 5,
-      accuracy: 4,
-    }));
+      naturalness_preferred: 'styletts2',
+      accuracy_preferred: 'roboshaul',
+    };
 
     // Call the function
-    await submitBatch(submissions);
+    await submitBatch([submission]);
 
     // Verify the mock was called
     const mockedSubmit = vi.mocked(submitBatch);
@@ -58,20 +54,16 @@ describe('Evaluation Core Logic', () => {
 
     // Verify payload structure
     const payload = mockedSubmit.mock.calls[0][0];
-    expect(payload).toHaveLength(4);
+    expect(payload).toHaveLength(1);
 
-    // Check specific fields for one item to ensure mapping is correct
-    expect(payload).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: 'Test User',
-          email: 'test@example.com',
-          sentence_id: 'sentence-1',
-          model: 'phonikud_stts2',
-          naturalness: 5,
-          accuracy: 4,
-        })
-      ])
+    expect(payload[0]).toEqual(
+      expect.objectContaining({
+        name: 'Test User',
+        email: 'test@example.com',
+        sentence_id: 'sentence-1',
+        naturalness_preferred: 'styletts2',
+        accuracy_preferred: 'roboshaul',
+      })
     );
   });
 });

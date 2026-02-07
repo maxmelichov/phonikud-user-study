@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .DS_Store
+Text-To-speech
+*.onnx
+*.npy
+*.onnx.*
+*.npz

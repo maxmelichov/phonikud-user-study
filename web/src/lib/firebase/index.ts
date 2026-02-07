@@ -18,9 +18,8 @@ export interface Submission {
   name: string;
   email: string;
   sentence_id: string;
-  model: string;
-  naturalness: number;  // 1-5
-  accuracy: number;     // 1-5
+  naturalness_preferred: string; // actual model name
+  accuracy_preferred: string;    // actual model name
   timestamp?: Date;
 }
 
@@ -55,7 +54,7 @@ export async function submitSubmission(submission: Submission) {
 export async function submitBatch(submissions: Submission[]): Promise<void> {
   try {
     const batch = writeBatch(db);
-    
+
     submissions.forEach((submission) => {
       const docRef = doc(collection(db, 'submissions'));
       batch.set(docRef, {
@@ -63,7 +62,7 @@ export async function submitBatch(submissions: Submission[]): Promise<void> {
         timestamp: new Date()
       });
     });
-    
+
     await batch.commit();
     console.log(`Batch of ${submissions.length} submissions added successfully`);
   } catch (error) {
@@ -115,45 +114,35 @@ export async function getAllSubmissions(): Promise<Submission[]> {
 }
 
 /**
- * Calculate statistics per model
+ * Calculate win-count statistics per model
  */
 export interface ModelStats {
   model: string;
-  count: number;
-  meanNaturalness: number;
-  meanAccuracy: number;
-  stderrNaturalness: number;
-  stderrAccuracy: number;
+  naturalness_wins: number;
+  accuracy_wins: number;
+  total_comparisons: number;
 }
 
 export function calculateStats(submissions: Submission[]): ModelStats[] {
-  const modelGroups = submissions.reduce((acc, sub) => {
-    if (!acc[sub.model]) {
-      acc[sub.model] = [];
-    }
-    acc[sub.model].push(sub);
-    return acc;
-  }, {} as Record<string, Submission[]>);
+  const modelMap: Record<string, { naturalness_wins: number; accuracy_wins: number; total: number }> = {};
 
-  return Object.entries(modelGroups).map(([model, subs]) => {
-    const naturalness = subs.map(s => s.naturalness);
-    const accuracy = subs.map(s => s.accuracy);
-    
-    const meanNat = naturalness.reduce((a, b) => a + b, 0) / naturalness.length;
-    const meanAcc = accuracy.reduce((a, b) => a + b, 0) / accuracy.length;
-    
-    const varNat = naturalness.reduce((a, b) => a + Math.pow(b - meanNat, 2), 0) / naturalness.length;
-    const varAcc = accuracy.reduce((a, b) => a + Math.pow(b - meanAcc, 2), 0) / accuracy.length;
-    
-    return {
-      model,
-      count: subs.length,
-      meanNaturalness: meanNat,
-      meanAccuracy: meanAcc,
-      stderrNaturalness: Math.sqrt(varNat / subs.length),
-      stderrAccuracy: Math.sqrt(varAcc / subs.length)
-    };
-  });
+  for (const sub of submissions) {
+    for (const model of [sub.naturalness_preferred, sub.accuracy_preferred]) {
+      if (!modelMap[model]) {
+        modelMap[model] = { naturalness_wins: 0, accuracy_wins: 0, total: 0 };
+      }
+    }
+
+    modelMap[sub.naturalness_preferred].naturalness_wins++;
+    modelMap[sub.accuracy_preferred].accuracy_wins++;
+  }
+
+  return Object.keys(modelMap).map(model => ({
+    model,
+    naturalness_wins: modelMap[model].naturalness_wins,
+    accuracy_wins: modelMap[model].accuracy_wins,
+    total_comparisons: submissions.length
+  }));
 }
 
 /**
@@ -164,7 +153,7 @@ export async function exportToCSV(): Promise<string> {
     const querySnapshot = await getDocs(collection(db, 'submissions'));
 
     // CSV header
-    const headers = ['name', 'email', 'sentence_id', 'model', 'naturalness', 'accuracy', 'timestamp'];
+    const headers = ['name', 'email', 'sentence_id', 'naturalness_preferred', 'accuracy_preferred', 'timestamp'];
     const rows = [headers.join(',')];
 
     // CSV rows
@@ -174,9 +163,8 @@ export async function exportToCSV(): Promise<string> {
         data.name,
         data.email,
         data.sentence_id,
-        data.model,
-        data.naturalness,
-        data.accuracy,
+        data.naturalness_preferred,
+        data.accuracy_preferred,
         data.timestamp?.toDate?.().toISOString() || data.timestamp
       ];
       rows.push(row.join(','));

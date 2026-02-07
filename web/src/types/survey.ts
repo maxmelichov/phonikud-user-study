@@ -9,9 +9,8 @@ export interface UserData {
 
 export interface Rating {
   sentenceId: string;
-  model: string; // e.g., "phonikud", "nakdimon", "google", "azure"
-  naturalness?: number; // 1-5
-  accuracy?: number; // 1-5
+  naturalness?: 'A' | 'B';
+  accuracy?: 'A' | 'B';
 }
 
 export interface ModelShuffle {

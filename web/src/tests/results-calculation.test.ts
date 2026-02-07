@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { calculateStats } from '@/lib/firebase';
 
 describe('calculateStats', () => {
-  it('computes per-model counts and averages', () => {
+  it('computes per-model win counts', () => {
     const submissions = [
-      { name: 'A', email: 'a@example.com', sentence_id: 's1', model: 'm1', naturalness: 5, accuracy: 4 },
-      { name: 'B', email: 'b@example.com', sentence_id: 's2', model: 'm1', naturalness: 3, accuracy: 2 },
-      { name: 'C', email: 'c@example.com', sentence_id: 's1', model: 'm2', naturalness: 4, accuracy: 5 },
+      { name: 'A', email: 'a@example.com', sentence_id: 's1', naturalness_preferred: 'm1', accuracy_preferred: 'm2' },
+      { name: 'B', email: 'b@example.com', sentence_id: 's2', naturalness_preferred: 'm1', accuracy_preferred: 'm1' },
+      { name: 'C', email: 'c@example.com', sentence_id: 's3', naturalness_preferred: 'm2', accuracy_preferred: 'm2' },
     ];
 
     const stats = calculateStats(submissions);
@@ -15,16 +15,16 @@ describe('calculateStats', () => {
 
     expect(m1).toMatchObject({
       model: 'm1',
-      count: 2,
-      meanNaturalness: 4,
-      meanAccuracy: 3,
+      naturalness_wins: 2,
+      accuracy_wins: 1,
+      total_comparisons: 3,
     });
 
     expect(m2).toMatchObject({
       model: 'm2',
-      count: 1,
-      meanNaturalness: 4,
-      meanAccuracy: 5,
+      naturalness_wins: 1,
+      accuracy_wins: 2,
+      total_comparisons: 3,
     });
   });
 });

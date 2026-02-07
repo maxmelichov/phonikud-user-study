@@ -14,28 +14,13 @@ export function isValidName(name: string): boolean {
 }
 
 /**
- * Validate rating (must be integer between 1 and 5)
- */
-export function isValidRating(rating: number): boolean {
-  return Number.isInteger(rating) && rating >= 1 && rating <= 5;
-}
-
-/**
- * Validate that all ratings for a sentence are complete
- * Each sentence requires 4 models × 2 ratings (naturalness + accuracy) = 8 total ratings
+ * Validate that the A/B rating for a sentence is complete
+ * Each sentence requires both naturalness and accuracy preferences
  */
 export function areSentenceRatingsComplete(
   sentenceId: string,
-  models: string[],
-  ratings: Array<{ sentenceId: string; model: string; naturalness?: number; accuracy?: number }>
+  ratings: Array<{ sentenceId: string; naturalness?: 'A' | 'B'; accuracy?: 'A' | 'B' }>
 ): boolean {
-  const sentenceRatings = ratings.filter(r => r.sentenceId === sentenceId);
-  
-  // Check that we have ratings for all models
-  return models.every(model => {
-    const modelRating = sentenceRatings.find(r => r.model === model);
-    return modelRating && 
-           isValidRating(modelRating.naturalness ?? -1) && 
-           isValidRating(modelRating.accuracy ?? -1);
-  });
+  const rating = ratings.find(r => r.sentenceId === sentenceId);
+  return Boolean(rating?.naturalness && rating?.accuracy);
 }

@@ -6,12 +6,12 @@ interface SurveyContextType {
   surveyState: SurveyState;
   setCurrentSentenceIndex: (index: number) => void;
   addRating: (rating: Rating) => void;
-  updateRating: (sentenceId: string, model: string, updates: Partial<Rating>) => void;
+  updateRating: (sentenceId: string, updates: Partial<Rating>) => void;
   setModelShuffles: (shuffles: ModelShuffle[]) => void;
   markSentenceAsSubmitted: (sentenceId: string) => void;
   completeSurvey: () => void;
   resetSurvey: () => void;
-  getRating: (sentenceId: string, model: string) => Rating | undefined;
+  getRating: (sentenceId: string) => Rating | undefined;
 }
 
 const SurveyContext = createContext<SurveyContextType | undefined>(undefined);
@@ -38,22 +38,20 @@ export function SurveyProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const updateRating = (sentenceId: string, model: string, updates: Partial<Rating>) => {
+  const updateRating = (sentenceId: string, updates: Partial<Rating>) => {
     setSurveyState(prev => {
       const existingIndex = prev.ratings.findIndex(
-        r => r.sentenceId === sentenceId && r.model === model
+        r => r.sentenceId === sentenceId
       );
 
       if (existingIndex >= 0) {
-        // Update existing rating
         const newRatings = [...prev.ratings];
         newRatings[existingIndex] = { ...newRatings[existingIndex], ...updates };
         return { ...prev, ratings: newRatings };
       } else {
-        // Add new rating
         return {
           ...prev,
-          ratings: [...prev.ratings, { sentenceId, model, ...updates }]
+          ratings: [...prev.ratings, { sentenceId, ...updates }]
         };
       }
     });
@@ -78,9 +76,9 @@ export function SurveyProvider({ children }: { children: ReactNode }) {
     setSurveyState(initialState);
   };
 
-  const getRating = (sentenceId: string, model: string): Rating | undefined => {
+  const getRating = (sentenceId: string): Rating | undefined => {
     return surveyState.ratings.find(
-      r => r.sentenceId === sentenceId && r.model === model
+      r => r.sentenceId === sentenceId
     );
   };
 

@@ -48,9 +48,7 @@ export async function loadSentences(): Promise<Sentence[]> {
  * Get available TTS models - mapped to actual audio folder names
  */
 export const TTS_MODELS = [
-  'phonikud_stts2', 
-  'roboshaul_nakdimon', 
-  'gemini_unvocalized', 
-  'piper-phonikud'
+  'styletts2',
+  'roboshaul'
 ] as const;
 export type TtsModel = typeof TTS_MODELS[number];

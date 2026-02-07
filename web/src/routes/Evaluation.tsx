@@ -5,10 +5,9 @@ import { useSurvey } from '../contexts/SurveyContext';
 import { useSurveyProgress } from '../hooks/useSurveyProgress';
 import { useLocalStorage, useAutoSave } from '../hooks/useLocalStorage';
 import { useSingleAudioPlayer } from '../hooks/useSingleAudioPlayer';
-import { loadSentences, TTS_MODELS } from '../lib/sentences';
+import { loadSentences } from '../lib/sentences';
 import { submitBatch } from '../lib/firebase';
 import type { Sentence } from '../types/survey';
-import { cn } from '../lib/utils';
 import { Progress } from '../components/ui/progress';
 import { Button } from '../components/ui/button';
 import { AudioPlayer } from '../components/AudioPlayer';
@@ -18,10 +17,10 @@ import { Info, ChevronLeft, ChevronRight } from 'lucide-react';
 export default function Evaluation() {
   const navigate = useNavigate();
   const { userData } = useUser();
-  const { surveyState, setCurrentSentenceIndex, updateRating, markSentenceAsSubmitted, completeSurvey } = useSurvey();
+  const { surveyState, setCurrentSentenceIndex, updateRating, getRating, markSentenceAsSubmitted, completeSurvey } = useSurvey();
   const { saveToStorage } = useLocalStorage(userData?.sessionId || null);
   const { registerAudio } = useSingleAudioPlayer();
-  
+
   const [sentences, setSentences] = useState<Sentence[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,17 +63,16 @@ export default function Evaluation() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [surveyState.isComplete]);
 
-  const { 
-    progressPercentage, 
-    canGoPrevious, 
+  const {
+    progressPercentage,
+    canGoPrevious,
     isLastSentence,
     currentSentenceId
   } = useSurveyProgress(
     surveyState.currentSentenceIndex,
     userData?.sentenceOrder.length || 0,
     surveyState.ratings,
-    userData?.sentenceOrder || [],
-    [...TTS_MODELS]
+    userData?.sentenceOrder || []
   );
 
   if (isLoading) {
@@ -95,15 +93,8 @@ export default function Evaluation() {
     m => m.sentenceId === currentSentenceId
   );
 
-  // Check if all ratings are complete
-  const allRatingsComplete = currentModelShuffle
-    ? currentModelShuffle.modelOrder.every(model => {
-        const rating = surveyState.ratings.find(
-          r => r.sentenceId === currentSentenceId && r.model === model
-        );
-        return rating && rating.naturalness && rating.accuracy;
-      })
-    : false;
+  const rating = getRating(currentSentenceId);
+  const allRatingsComplete = Boolean(rating?.naturalness && rating?.accuracy);
 
   if (!currentSentenceData || !currentModelShuffle) {
     return (
@@ -113,40 +104,29 @@ export default function Evaluation() {
     );
   }
 
+  const [modelA, modelB] = currentModelShuffle.modelOrder;
+
   const handleNext = async () => {
-    if (!allRatingsComplete || !currentSentenceId) return;
+    if (!allRatingsComplete || !currentSentenceId || !rating) return;
 
     // Check if this sentence hasn't been submitted yet
     if (!surveyState.submittedSentences.includes(currentSentenceId)) {
       setIsSubmitting(true);
-      
-      try {
-        // Prepare submissions for all 4 models
-        const submissions = currentModelShuffle.modelOrder.map(model => {
-          const rating = surveyState.ratings.find(
-            r => r.sentenceId === currentSentenceId && r.model === model
-          );
-          
-          if (!rating || !rating.naturalness || !rating.accuracy) {
-            throw new Error('חסרות דירוגים עבור אחת הדגימות');
-          }
-          
-          return {
-            name: userData.name,
-            email: userData.email,
-            sentence_id: currentSentenceId,
-            model,
-            naturalness: rating.naturalness,
-            accuracy: rating.accuracy
-          };
-        });
 
-        // Submit to Firebase
-        await submitBatch(submissions);
-        
-        // Mark as submitted
+      try {
+        // Resolve A/B to actual model names
+        const naturalness_preferred = rating.naturalness === 'A' ? modelA : modelB;
+        const accuracy_preferred = rating.accuracy === 'A' ? modelA : modelB;
+
+        await submitBatch([{
+          name: userData.name,
+          email: userData.email,
+          sentence_id: currentSentenceId,
+          naturalness_preferred,
+          accuracy_preferred
+        }]);
+
         markSentenceAsSubmitted(currentSentenceId);
-        
         console.log(`Submitted ratings for sentence ${currentSentenceId}`);
       } catch (error) {
         console.error('Error submitting ratings:', error);
@@ -174,19 +154,12 @@ export default function Evaluation() {
     window.scrollTo(0, 0);
   };
 
-  const handleRatingChange = (model: string, field: 'naturalness' | 'accuracy', value: number) => {
-    updateRating(currentSentenceId, model, { [field]: value });
-  };
-
-  const getModelRating = (model: string) => {
-    return surveyState.ratings.find(
-      r => r.sentenceId === currentSentenceId && r.model === model
-    );
-  };
+  const audioSrcA = `${import.meta.env.BASE_URL}audio/${modelA}/${currentSentenceId}.m4a`;
+  const audioSrcB = `${import.meta.env.BASE_URL}audio/${modelB}/${currentSentenceId}.m4a`;
 
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4">
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-6">
         {/* Progress Bar */}
         <div className="space-y-2">
           <div className="flex justify-between items-center">
@@ -205,80 +178,60 @@ export default function Evaluation() {
               <Info className="h-4 w-4" />
             </div>
             <div className="space-y-2 text-sm text-slate-700">
-              <div className="font-semibold">הנחיות לדירוג</div>
+              <div className="font-semibold">הנחיות להשוואה</div>
               <div className="grid gap-1">
                 <div>
-                  <span className="font-semibold">טבעיות הדיבור:</span>{' '}
-                  עד כמה הדיבור נשמע טבעי ודומה לדובר אנושי (טון, קצב, זרימה)
-                </div>
-                <div>
-                  <span className="font-semibold">התאמה לטקסט:</span>{' '}
-                  עד כמה האודיו משקף נכון את הטקסט (הגייה, ניקוד, דגשים)
+                  האזינו לשתי הדגימות ובחרו מי נשמע טוב יותר בכל קטגוריה.
                 </div>
               </div>
-              <div className="text-slate-500">האזינו לכל 4 הדגימות ודרגו כל אחת בנפרד.</div>
             </div>
           </div>
         </div>
 
-        {/* Audio Players and Ratings */}
-        <div className="grid gap-6">
-          {currentModelShuffle.modelOrder.map((model, index) => {
-            const label = String.fromCharCode(65 + index); // A, B, C, D
-            const audioSrc = `${import.meta.env.BASE_URL}audio/${model}/${currentSentenceId}.m4a`;
-            const rating = getModelRating(model);
+        {/* Sentence Text */}
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs text-slate-500 text-center mb-1" dir="rtl">
+            הטקסט שהוזן למערכת
+          </div>
+          <div className="text-lg font-medium text-center" dir="rtl">
+            {currentSentenceData.text}
+          </div>
+        </div>
 
-            const isComplete = Boolean(rating?.naturalness && rating?.accuracy);
-            const sampleId = `${currentSentenceId}-${model}`;
+        {/* Audio Players Side by Side */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+            <div className="text-lg font-bold text-center">A</div>
+            <AudioPlayer
+              key={`audio-${currentSentenceId}-A`}
+              audioSrc={audioSrcA}
+              label="A"
+              onAudioRef={registerAudio}
+              className="bg-transparent p-0 border-0 rounded-none shadow-none"
+              showLabel={false}
+            />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+            <div className="text-lg font-bold text-center">B</div>
+            <AudioPlayer
+              key={`audio-${currentSentenceId}-B`}
+              audioSrc={audioSrcB}
+              label="B"
+              onAudioRef={registerAudio}
+              className="bg-transparent p-0 border-0 rounded-none shadow-none"
+              showLabel={false}
+            />
+          </div>
+        </div>
 
-            return (
-              <div
-                key={sampleId}
-                className={cn(
-                  "rounded-xl border bg-white p-5 space-y-5 transition-colors shadow-sm",
-                  isComplete ? "border-emerald-400 bg-emerald-50/40" : "border-slate-200"
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="text-lg font-semibold" dir="rtl">
-                    דגימה {label}
-                  </div>
-                  {isComplete && (
-                    <div className="text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full">
-                      הושלם
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <div className="text-xs text-slate-500 text-center mb-1" dir="rtl">
-                    הטקסט שהוזן למערכת
-                  </div>
-                  <div className="text-lg font-medium text-center" dir="rtl">
-                    {currentSentenceData.text}
-                  </div>
-                </div>
-
-                <AudioPlayer 
-                  key={`audio-${sampleId}`}
-                  audioSrc={audioSrc} 
-                  label={label}
-                  onAudioRef={registerAudio}
-                  className="bg-transparent p-0 border-0 rounded-none shadow-none"
-                  showLabel={false}
-                />
-
-                <RatingInput
-                  key={`rating-${sampleId}`}
-                  idPrefix={sampleId}
-                  naturalness={rating?.naturalness}
-                  accuracy={rating?.accuracy}
-                  onNaturalnessChange={(value) => handleRatingChange(model, 'naturalness', value)}
-                  onAccuracyChange={(value) => handleRatingChange(model, 'accuracy', value)}
-                />
-              </div>
-            );
-          })}
+        {/* Rating Input */}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <RatingInput
+            naturalness={rating?.naturalness}
+            accuracy={rating?.accuracy}
+            onNaturalnessChange={(v) => updateRating(currentSentenceId, { naturalness: v })}
+            onAccuracyChange={(v) => updateRating(currentSentenceId, { accuracy: v })}
+          />
         </div>
 
         {/* Navigation Buttons */}
@@ -312,7 +265,7 @@ export default function Evaluation() {
         {/* Warning if not complete */}
         {!allRatingsComplete && (
           <div className="text-center text-sm text-amber-600" dir="rtl">
-            נא לדרג את כל הדגימות לפני המעבר למשפט הבא
+            נא לבחור העדפה בכל קטגוריה לפני המעבר למשפט הבא
           </div>
         )}
       </div>
