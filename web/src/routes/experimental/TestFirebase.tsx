@@ -12,10 +12,9 @@ export default function TestFirebase() {
       await submitSubmission({
         name: 'Test User',
         email: 'test@example.com',
-        sentence_id: 'gold_000_line_012',
-        model: 'gemini_unvocalized',
-        naturalness: 4,
-        accuracy: 5
+        sentence_id: '0',
+        naturalness_preferred: 'styletts2',
+        accuracy_preferred: 'roboshaul'
       })
       setStatus('Submission successful!')
     } catch (error) {
